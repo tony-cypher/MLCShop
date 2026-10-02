@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Order confirmed</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f0ff;font-family:Segoe UI,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f0ff;padding:32px 16px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="520" cellpadding="0" cellspacing="0"
+                       style="background:#ffffff;border-radius:20px;padding:40px;max-width:520px;width:100%;">
+                    <tr>
+                        <td style="padding-bottom:24px;">
+                            <span style="font-size:24px;font-weight:800;letter-spacing:-1px;color:#111827;">{{ app_name }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-bottom:8px;">
+                            <h1 style="margin:0;font-size:22px;color:#111827;">Thanks, {{ order.name }}!</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-bottom:24px;color:#4b5563;font-size:15px;line-height:1.6;">
+                            Your order <strong style="color:#6c5ce7;">{{ order.reference }}</strong> is confirmed.
+                            This was a <strong>test order</strong> — no card was charged.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-bottom:24px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                                   style="border:1px solid #ece9ff;border-radius:14px;overflow:hidden;font-size:14px;">
+                                <tr style="background:#f6f4ff;">
+                                    <td style="padding:12px 16px;color:#6b7280;font-weight:600;">Item</td>
+                                    <td align="center" style="padding:12px 8px;color:#6b7280;font-weight:600;">Qty</td>
+                                    <td align="right" style="padding:12px 16px;color:#6b7280;font-weight:600;">Price</td>
+                                </tr>
+                                {% for item in items %}
+                                    <tr>
+                                        <td style="padding:12px 16px;border-top:1px solid #ece9ff;color:#111827;">
+                                            {% if item.image_src %}<img src="{{ item.image_src }}" alt="" width="36" height="36"
+                                                 style="width:36px;height:36px;object-fit:cover;border-radius:8px;vertical-align:middle;margin-right:8px;border:1px solid #ece9ff;">{% endif %}
+                                            {{ item.emoji }} {{ item.name }}
+                                        </td>
+                                        <td align="center" style="padding:12px 8px;border-top:1px solid #ece9ff;color:#111827;">
+                                            {{ item.quantity }}
+                                        </td>
+                                        <td align="right" style="padding:12px 16px;border-top:1px solid #ece9ff;color:#111827;">
+                                            ${{ item.line_total }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                <tr>
+                                    <td colspan="2" style="padding:12px 16px;border-top:1px solid #ece9ff;color:#6b7280;">Subtotal</td>
+                                    <td align="right" style="padding:12px 16px;border-top:1px solid #ece9ff;color:#111827;">
+                                        ${{ order.subtotal }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="padding:8px 16px;color:#6b7280;">
+                                        Shipping ({{ 'Pick Up' if order.delivery_method == 'pickup' else 'Standard' }})
+                                    </td>
+                                    <td align="right" style="padding:8px 16px;color:#111827;">
+                                        {{ '$' ~ order.shipping if order.shipping_charged else 'Free' }}
+                                    </td>
+                                </tr>
+                                <tr style="background:#f6f4ff;">
+                                    <td colspan="2" style="padding:12px 16px;font-weight:700;color:#111827;">Total</td>
+                                    <td align="right" style="padding:12px 16px;font-weight:700;color:#6c5ce7;">
+                                        ${{ order.total }}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#9ca3af;font-size:12px;line-height:1.6;">
+                            {{ fulfilment_note }}
+                            <br>
+                            Test checkout — no payment was processed. Paid status is simulated for demo purposes.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

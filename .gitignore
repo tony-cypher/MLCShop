@@ -1,0 +1,18 @@
+# --- OS / editor noise ------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# --- Freebuff workspace metadata --------------------------------------------
+.freebuff/
+
+# --- Environment files ------------------------------------------------------
+# Real secrets must never be committed. The .env.example files (which contain
+# only placeholders) ARE tracked — backend/.gitignore and frontend/.gitignore
+# cover the per-project .env files as well.
+.env
+.env.local
+.env.*.local
+
+# --- Logs -------------------------------------------------------------------
+*.log
+

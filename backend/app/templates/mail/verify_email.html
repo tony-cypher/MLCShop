@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Confirm your email</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f0ff;font-family:Segoe UI,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f0ff;padding:32px 16px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="520" cellpadding="0" cellspacing="0"
+                       style="background:#ffffff;border-radius:20px;padding:40px;max-width:520px;width:100%;">
+                    <tr>
+                        <td style="padding-bottom:24px;">
+                            <span style="font-size:24px;font-weight:800;letter-spacing:-1px;color:#111827;">{{ app_name }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-bottom:16px;">
+                            <h1 style="margin:0;font-size:22px;color:#111827;">Hi {{ name }}, confirm your email</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-bottom:28px;color:#4b5563;font-size:15px;line-height:1.6;">
+                            Thanks for joining {{ app_name }}. Tap the button below to confirm your address and
+                            activate order updates, favourites sync and your order history.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-bottom:28px;">
+                            <a href="{{ verify_url }}"
+                               style="display:inline-block;background:#6c5ce7;color:#ffffff;text-decoration:none;
+                                      font-weight:700;font-size:15px;padding:14px 28px;border-radius:999px;">
+                                Confirm my email
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#9ca3af;font-size:12px;line-height:1.6;">
+                            This link is valid for your new account only. If you didn’t create an
+                            account at {{ frontend_url }}, you can safely ignore this email.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -1,0 +1,75 @@
+# Render Blueprint — deploys the MLC FastAPI service.
+#
+# One-click deploy: Render dashboard -> New + -> Blueprint -> pick this repo.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# The service uses Render's native Python runtime with `backend/` as the root
+# directory; the React frontend deploys separately to Vercel.
+#
+# Every `sync: false` value is a secret you fill in once, in the Render
+# dashboard (see backend/.env.production.example).
+
+services:
+  - type: web
+    name: mlc-api
+    runtime: python
+    plan: free
+    region: oregon # pick the region closest to your Supabase project
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /up
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_NAME
+        value: MLC
+      - key: LOG_LEVEL
+        value: info
+      - key: APP_URL
+        sync: false # https://mlc-api.onrender.com
+      - key: FRONTEND_URL
+        sync: false # https://mlc-shop.vercel.app
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false # optional extra origins, comma-separated
+      - key: CORS_ALLOWED_ORIGINS_PATTERNS
+        sync: false # optional regexes, comma-separated
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        sync: false # Supabase host (prefer the session pooler)
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DATABASE
+        value: postgres
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: RUN_SEED
+        value: "false" # set true once for the first deploy, then back to false
+      - key: MAIL_MAILER
+        value: log # switch to mailgun in production
+      - key: MAIL_FROM_ADDRESS
+        value: no-reply@mg.yourdomain.com
+      - key: MAIL_FROM_NAME
+        value: MLC
+      - key: MAILGUN_DOMAIN
+        sync: false
+      - key: MAILGUN_SECRET
+        sync: false
+      - key: MAILGUN_ENDPOINT
+        value: default # use api.eu.mailgun.net for EU accounts
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false # https://mlc-api.onrender.com/api/auth/google/callback
