@@ -187,7 +187,9 @@ create an OAuth client and paste the credentials into `backend/.env`.
      consent screen is in *Testing* mode).
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID**
    - Application type: **Web application**.
-   - **Authorized redirect URI**: `http://localhost:8000/api/auth/google/callback`
+   - **Authorized redirect URIs**: add both
+     `http://localhost:8000/api/auth/google/callback` (local dev) and
+     `https://<your-service>.onrender.com/api/auth/google/callback` (production).
    - Create, then copy the **Client ID** and **Client secret**.
 
 ### Enable it in the app
@@ -197,7 +199,7 @@ create an OAuth client and paste the credentials into `backend/.env`.
 ```env
 GOOGLE_CLIENT_ID=1234567890-xxxxxxxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxx
-GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/google/callback
+# GOOGLE_REDIRECT_URI is OPTIONAL — leave it blank to derive the callback below.
 ```
 
 6. Restart the API. Reload <http://localhost:5173/login> — the Google button is now active, and
@@ -207,6 +209,26 @@ GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/google/callback
 > creates the user by email (stamping `google_id` and `avatar_url`), issues a bearer token and
 > redirects to `/auth/google/callback#token=…` on the storefront. Signing in with Google also marks
 > the address as verified, so no confirmation email is sent.
+
+### URLs are detected automatically (no localhost in production)
+
+The callback URL and the final redirect are resolved from the environment and the request, so you
+never hard-code a host:
+
+1. **Callback (redirect_uri)** — `GOOGLE_REDIRECT_URI` if set, otherwise
+   `<APP_URL>/api/auth/google/callback`; on Render `APP_URL` defaults to the service's
+   `RENDER_EXTERNAL_URL` (e.g. `https://mlcshop.onrender.com`), and locally it falls back to the
+   host you are browsing.
+2. **Return to the storefront** — the SPA sends its own origin when it starts the flow
+   (`/api/auth/google/redirect?origin=…`); the server keeps it in the OAuth `state` and returns the
+   browser there. `FRONTEND_URL` is the fallback when no origin is available.
+
+**In production you only need to set:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and
+`FRONTEND_URL` (your Vercel URL). The callback is derived automatically — leave `APP_URL` and
+`GOOGLE_REDIRECT_URI` blank unless you use a custom domain.
+
+The value used for the callback must appear **exactly** in the OAuth client's *Authorized redirect
+URIs*. A `redirect_uri_mismatch` in the API logs is the tell-tale sign it does not match.
 
 ---
 
@@ -226,11 +248,12 @@ backend/                  FastAPI service
 │  ├─ ratelimit.py            auth 10/min, checkout 8/min per IP
 │  ├─ mailer.py               Mailgun sender + Jinja email templates
 │  ├─ google_oauth.py         Google OAuth 2.0 flow
+│  ├─ urls.py                 env/request-aware callback + frontend URL resolution
 │  ├─ validation.py           pydantic → Laravel-style error maps
 │  ├─ seed.py / seed_data.py  idempotent seeders (33 products, 10 brands, 8 categories)
 │  ├─ routers/                catalog, auth, checkout, favorites, orders
 │  └─ templates/mail/         confirmation + order emails
-├─ tests/                     pytest suite (33 tests)
+├─ tests/                     pytest suite (42 tests)
 ├─ scripts/                   fetch_product_images.py (one-time image downloader)
 ├─ requirements.txt           runtime dependencies
 └─ .env.example               every environment variable, documented
@@ -309,22 +332,23 @@ git push -u origin main
 ### 1. Backend → Render
 
 1. [render.com](https://dashboard.render.com) → **New + → Blueprint** → connect the GitHub repo.
-   Render reads `render.yaml` and creates the **mlc-api** web service (Python, free plan,
+   Render reads `render.yaml` and creates the **mlcshop** web service (Python, free plan,
    root directory `backend`, health check `/up`).
 2. Fill the `sync: false` values (Render asks during setup, or set them later under
    **Environment**). Copy from `backend/.env.production.example`:
 
    | Key | Value |
    | --- | --- |
-   | `APP_URL` | `https://mlc-api.onrender.com` (Render shows the service URL) |
-   | `FRONTEND_URL` | your Vercel URL, e.g. `https://mlc-shop.vercel.app` |
+   | `FRONTEND_URL` | your Vercel URL, e.g. `https://your-app.vercel.app` (**required**) |
    | `DB_HOST` / `DB_USERNAME` / `DB_PASSWORD` | from Supabase (**Connect → Session pooler**) |
+   | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | only to enable Google sign-in |
+   | `APP_URL` | optional — blank auto-detects from `RENDER_EXTERNAL_URL` |
    | `CORS_ALLOWED_ORIGINS` | leave empty unless you add extra domains |
 3. **Create Web Service.** On boot the service creates any missing tables (retrying 5× if the
    database is not reachable yet) and then serves on Render's `$PORT`.
 4. Seed the catalogue once: set **`RUN_SEED=true`** → **Manual Deploy → Deploy latest commit**
    → watch the logs for the seed line → set `RUN_SEED=false` again.
-5. Verify: open `https://mlc-api.onrender.com/up` → “OK”, and `/api/products` → JSON.
+5. Verify: open `https://mlcshop.onrender.com/up` → “OK”, and `/api/products` → JSON.
 
 > **Free tier notes:** the service sleeps after ~15 min idle (first request after that takes
 > ~30–60 s) and has no shell — use `RUN_SEED` and env vars instead of a one-off command.
@@ -336,7 +360,7 @@ git push -u origin main
 2. Configure the project:
    - **Root Directory:** `frontend`
    - **Framework Preset:** Vite (auto-detected) — build `npm run build`, output `dist`
-   - **Environment Variables:** `VITE_API_URL` = `https://mlc-api.onrender.com/api`
+   - **Environment Variables:** `VITE_API_URL` = `https://mlcshop.onrender.com/api`
      (your Render URL **+ `/api` suffix**)
 3. **Deploy.** Vercel runs `npm ci && npm run build` and serves the SPA — the `vercel.json`
    rewrite keeps deep links like `/product/…` working.
@@ -349,12 +373,12 @@ CLI alternative: `cd frontend && npm i -g vercel && vercel --prod`.
 | --- | --- |
 | Render → `FRONTEND_URL` | set to the Vercel URL → **Manual Deploy** (drives email links + CORS + Google callback) |
 | Vercel → `VITE_API_URL` | already set in step 2 → every change here needs a **redeploy** (Vite bakes it at build time) |
-| Google Cloud Console | add `https://mlc-api.onrender.com/api/auth/google/callback` to the OAuth client's **Authorized redirect URIs**, and set `GOOGLE_REDIRECT_URI` on Render to match |
+| Google Cloud Console | add `https://<service>.onrender.com/api/auth/google/callback` to the OAuth client's **Authorized redirect URIs** — the API derives the same value automatically, so `GOOGLE_REDIRECT_URI` is optional |
 | Mailgun | set `MAIL_MAILER=mailgun` + the three `MAILGUN_*` values on Render when ready to send real email |
 
 Order of operations for a clean first rollout: **push → Render deploy → get API URL → Vercel
-deploy with `VITE_API_URL` → get Vercel URL → back to Render, set `FRONTEND_URL` (+ Google
-redirect URI) → redeploy Render.**
+deploy with `VITE_API_URL` → get Vercel URL → back to Render, set `FRONTEND_URL` (and, if using
+Google sign-in, register the callback in the Cloud Console) → redeploy Render.**
 
 ### Production checklist
 
@@ -378,6 +402,14 @@ redirect URI) → redeploy Render.**
   (10/min and 8/min). Wait a minute, or raise the limits in `app/ratelimit.py`.
 - **Talking to Postgres fails with SSL errors** → keep `DB_SSLMODE=require`; if your password has
   special characters and you use `DATABASE_URL`, URL-encode them.
+- **Google sign-in fails after deploy (redirect lands on `/login?error=google`)** → check the Render
+  logs: the API prints the exact callback URL and Google's response. `redirect_uri_mismatch` means
+  that URL is missing from the OAuth client's *Authorized redirect URIs* — add it. Any `localhost`
+  in the printed URL means a stale `APP_URL` / `GOOGLE_REDIRECT_URI` is set in the Render dashboard;
+  clear it so the value is auto-detected from `RENDER_EXTERNAL_URL`.
+- **Users land on the wrong site after Google sign-in** → set `FRONTEND_URL` to your Vercel URL.
+  The SPA's own origin is trusted automatically, so a leftover `localhost` is tolerated; a wrong
+  custom domain is not.
 - **Frontend can't reach the API** → make sure `uvicorn app.main:app --reload` is running on port
   8000; the Vite proxy target lives in `frontend/vite.config.ts`.
 - **Port already in use** → `uvicorn app.main:app --port 8001` and update the proxy target.

@@ -13,20 +13,24 @@ TOKEN_URL = "https://oauth2.googleapis.com/token"
 USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 
-def authorization_url() -> str:
+def authorization_url(redirect_uri: str, state: str) -> str:
     params = {
         "client_id": settings.google_client_id,
-        "redirect_uri": settings.google_callback_url,
+        "redirect_uri": redirect_uri,
         "response_type": "code",
         "scope": "openid email profile",
         "access_type": "online",
         "prompt": "select_account",
+        "state": state,
     }
     return f"{AUTHORIZE_URL}?{urlencode(params)}"
 
 
-async def exchange_code(code: str) -> dict:
-    """Trade the authorization code for tokens."""
+async def exchange_code(code: str, redirect_uri: str) -> dict:
+    """Trade the authorization code for tokens.
+
+    ``redirect_uri`` must be byte-identical to the one used for authorization.
+    """
     async with httpx.AsyncClient(timeout=15.0) as client:
         response = await client.post(
             TOKEN_URL,
@@ -34,7 +38,7 @@ async def exchange_code(code: str) -> dict:
                 "code": code,
                 "client_id": settings.google_client_id,
                 "client_secret": settings.google_client_secret,
-                "redirect_uri": settings.google_callback_url,
+                "redirect_uri": redirect_uri,
                 "grant_type": "authorization_code",
             },
         )

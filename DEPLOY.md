@@ -13,8 +13,8 @@ this file is the step-by-step you follow on deploy day.
 - The full storefront was exercised against the live API: catalogue grid, filters/sidebar,
   product detail with reviews and related items, login, add-to-cart, cart totals and a complete
   test checkout — the order then appeared in **Orders** with status `confirmed`.
-- `python -m pytest -q` → **33 passed** (catalogue, auth, favourites, checkout, orders,
-  rate limiting).
+- `python -m pytest -q` → **42 passed** (catalogue, auth, favourites, checkout, orders,
+  rate limiting, dynamic OAuth URL resolution).
 - `npm run build` (tsc + Vite) → clean production build.
 - The seeded catalogue reproduces the original data exactly: 8 categories, 10 brands,
   33 products, 19 reviews, demo user, and every product slug matches its image file.
@@ -34,17 +34,18 @@ this file is the step-by-step you follow on deploy day.
 ## 2. Backend → Render (native Python runtime)
 
 1. Render dashboard → **New + → Blueprint** → pick the repo. Render reads `render.yaml`
-   (service `mlc-api`, root directory `backend`, health check `/up`,
+   (service `mlcshop`, root directory `backend`, health check `/up`,
    start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`).
 2. Fill the `sync: false` env vars:
 
    | Key | Value |
    | --- | --- |
-   | `APP_URL` | `https://<your-service>.onrender.com` |
-   | `FRONTEND_URL` | your Vercel URL (set after step 3; update + redeploy later) |
+   | `FRONTEND_URL` | your Vercel URL (set after step 3; update + redeploy later) — **required** |
    | `DB_HOST` / `DB_USERNAME` / `DB_PASSWORD` | from Supabase (session pooler) |
    | `MAILGUN_DOMAIN` / `MAILGUN_SECRET` | only when switching mail on |
-   | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` | only for Google sign-in |
+   | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | only for Google sign-in |
+   | `APP_URL` | **optional** — blank auto-detects `RENDER_EXTERNAL_URL`; set only for a custom domain |
+   | `GOOGLE_REDIRECT_URI` | **optional** — blank derives `<APP_URL>/api/auth/google/callback` |
    | `CORS_ALLOWED_ORIGINS` | leave empty unless you add extra domains |
 
    Defaults already set by the blueprint: `DB_CONNECTION=pgsql`, `DB_PORT=5432`,
@@ -80,7 +81,7 @@ Free tier: sleeps after ~15 min idle (first request ~30–60 s); no shell — us
 | Where | Change |
 | --- | --- |
 | Render → `FRONTEND_URL` | set to the Vercel URL → Manual Deploy (drives email links, CORS and the Google callback) |
-| Google Cloud Console | add `https://<service>.onrender.com/api/auth/google/callback`; set `GOOGLE_REDIRECT_URI` on Render to match |
+| Google Cloud Console | add `https://<service>.onrender.com/api/auth/google/callback` to the OAuth client's **Authorized redirect URIs**. The API derives the identical value from `RENDER_EXTERNAL_URL`, so no `GOOGLE_REDIRECT_URI` is required — but if you do set it, it must match exactly |
 | Mailgun | set `MAIL_MAILER=mailgun` + `MAILGUN_DOMAIN` / `MAILGUN_SECRET` / `MAILGUN_ENDPOINT` on Render when ready for real email |
 
 ---

@@ -3,7 +3,7 @@
  *
  * - Local dev: VITE_API_URL is unset → requests go to `/api`, which the Vite
  *   dev server proxies to http://127.0.0.1:8000.
- * - Production: VITE_API_URL is set (e.g. `https://mlc-api.onrender.com/api`),
+ * - Production: VITE_API_URL is set (e.g. `https://mlcshop.onrender.com/api`),
  *   so the SPA talks to the deployed FastAPI service on Render.
  */
 const API_BASE = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '');

@@ -164,4 +164,7 @@ node_modules
 .ruff_cache
 .hypothesis
 
-tests
+# Local SQLite databases (development + tests)
+shop.db
+test_shop.db
+smoke.db

@@ -11,7 +11,7 @@
 
 services:
   - type: web
-    name: mlc-api
+    name: mlcshop # determines the URL: https://mlcshop.onrender.com
     runtime: python
     plan: free
     region: oregon # pick the region closest to your Supabase project
@@ -32,9 +32,9 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: APP_URL
-        sync: false # https://mlc-api.onrender.com
+        sync: false # optional — auto-detected from RENDER_EXTERNAL_URL; override only for a custom domain
       - key: FRONTEND_URL
-        sync: false # https://mlc-shop.vercel.app
+        sync: false # REQUIRED: your Vercel URL, e.g. https://mlc-shop.vercel.app (drives CORS + OAuth redirect + email links)
       - key: CORS_ALLOWED_ORIGINS
         sync: false # optional extra origins, comma-separated
       - key: CORS_ALLOWED_ORIGINS_PATTERNS
@@ -72,4 +72,4 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
-        sync: false # https://mlc-api.onrender.com/api/auth/google/callback
+        sync: false # optional — defaults to <this service URL>/api/auth/google/callback

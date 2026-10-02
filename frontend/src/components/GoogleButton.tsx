@@ -56,8 +56,11 @@ export default function GoogleButton({ label = 'Continue with Google' }: GoogleB
   function start() {
     if (enabled) {
       // Full page navigation: Google takes over, and the API's callback
-      // redirects back to /auth/google/callback with a token.
-      window.location.href = apiUrl('/auth/google/redirect');
+      // redirects back to /auth/google/callback with a token. We pass this
+      // site's origin so the API can return the browser here without any
+      // hard-coded frontend host.
+      const origin = encodeURIComponent(window.location.origin);
+      window.location.href = `${apiUrl('/auth/google/redirect')}?origin=${origin}`;
       return;
     }
 

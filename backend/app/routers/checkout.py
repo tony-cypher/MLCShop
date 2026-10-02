@@ -11,10 +11,11 @@ import re
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .. import urls
 from ..database import get_db
 from ..deps import get_optional_user
 from ..errors import ApiValidationError
@@ -40,6 +41,7 @@ def _round(value: Decimal) -> Decimal:
 @router.post("/checkout", status_code=201, dependencies=[Depends(checkout_throttle)])
 def store(
     payload: CheckoutRequest,
+    request: Request,
     db: Session = Depends(get_db),
     user: User | None = Depends(get_optional_user),
 ) -> dict:
@@ -58,7 +60,7 @@ def store(
     db.commit()
     db.refresh(order)
 
-    send_order_confirmed_email(order)
+    send_order_confirmed_email(order, frontend_base=urls.frontend_origin(request))
 
     return {
         "data": order_payload(order),

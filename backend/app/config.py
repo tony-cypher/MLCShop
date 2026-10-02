@@ -8,10 +8,22 @@ for CORS + email links.
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Origins accepted when the operator configures an explicit allow-list.
+# Only used as a safety net when nothing is set, so the SPA + local dev keep
+# working without hard-coding a deployment host.
+FALLBACK_ORIGIN_PATTERNS = [
+    r"https://[a-z0-9-]+\.vercel\.app",
+    r"https://[a-z0-9-]+\.onrender\.com",
+    r"http://localhost(:\d+)?",
+    r"http://127\.0\.0\.1(:\d+)?",
+    r"http://\[::1\](:\d+)?",
+]
 
 
 class Settings(BaseSettings):
@@ -26,8 +38,14 @@ class Settings(BaseSettings):
     app_name: str = "MLC"
     app_env: str = "local"
     app_debug: bool = True
-    app_url: str = "http://localhost:8000"
-    frontend_url: str = "http://localhost:5173"
+    # Public base URL of THIS API. Leave blank to auto-detect: Render injects
+    # RENDER_EXTERNAL_URL, and the request host is used as a last resort.
+    # Never hard-code a host here.
+    app_url: str = ""
+    # Public base URL of the React storefront. Leave blank to auto-detect from
+    # the browser (Origin/Referer). Set it in production — it also drives CORS
+    # and the links inside confirmation emails.
+    frontend_url: str = ""
 
     # CORS — the storefront origin (FRONTEND_URL) plus optional extras.
     cors_allowed_origins: str = ""
@@ -95,13 +113,35 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
     @property
+    def resolved_app_url(self) -> str:
+        """Explicit APP_URL, else Render's auto-injected service URL, else ''."""
+        return (self.app_url or os.environ.get("RENDER_EXTERNAL_URL", "")).rstrip("/")
+
+    @property
+    def frontend_is_public(self) -> bool:
+        """False when FRONTEND_URL is unset or still a leftover localhost."""
+        url = (self.frontend_url or "").strip().lower()
+        if not url:
+            return False
+        return not any(host in url for host in ("localhost", "127.0.0.1", "[::1]", "0.0.0.0"))
+
+    @property
     def allowed_origin_regex(self) -> str | None:
         patterns = [p.strip() for p in self.cors_allowed_origins_patterns.split(",") if p.strip()]
-        return "|".join(patterns) if patterns else None
+        if not patterns and not self.frontend_is_public and not self.cors_allowed_origins.strip():
+            # Nothing usable configured (unset, or still localhost): keep local
+            # dev and common hosts (Vercel/Render) working instead of blocking
+            # every cross-origin request.
+            patterns = list(FALLBACK_ORIGIN_PATTERNS)
+        return "|".join(f"(?:{p})" for p in patterns) if patterns else None
 
     @property
     def google_callback_url(self) -> str:
-        return self.google_redirect_uri or f"{self.app_url.rstrip('/')}/api/auth/google/callback"
+        """Env-based callback URL (request-aware resolution lives in app.urls)."""
+        base = self.resolved_app_url
+        if self.google_redirect_uri:
+            return self.google_redirect_uri.strip()
+        return f"{base}/api/auth/google/callback" if base else ""
 
     @property
     def google_enabled(self) -> bool:

@@ -76,14 +76,16 @@ def send(to: str, subject: str, html: str, text: str | None = None) -> bool:
 # --------------------------------------------------------------------------- #
 
 
-def send_verification_email(user: User, verify_url: str) -> bool:
+def send_verification_email(
+    user: User, verify_url: str, frontend_base: str | None = None
+) -> bool:
     subject = f"Confirm your email — {settings.app_name}"
     html = render(
         "mail/verify_email.html",
         app_name=settings.app_name,
         name=user.name,
         verify_url=verify_url,
-        frontend_url=settings.frontend_url,
+        frontend_url=(frontend_base or settings.frontend_url).rstrip("/"),
     )
     text = (
         f"Hi {user.name},\n\n"
@@ -92,8 +94,8 @@ def send_verification_email(user: User, verify_url: str) -> bool:
     return send(user.email, subject, html, text)
 
 
-def send_order_confirmed_email(order: Order) -> bool:
-    frontend = settings.frontend_url.rstrip("/")
+def send_order_confirmed_email(order: Order, frontend_base: str | None = None) -> bool:
+    frontend = (frontend_base or settings.frontend_url).rstrip("/")
 
     items = [
         {
