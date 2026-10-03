@@ -42,7 +42,7 @@ this file is the step-by-step you follow on deploy day.
    | --- | --- |
    | `FRONTEND_URL` | your Vercel URL (set after step 3; update + redeploy later) — **required** |
    | `DB_HOST` / `DB_USERNAME` / `DB_PASSWORD` | from Supabase (session pooler) |
-   | `MAILGUN_DOMAIN` / `MAILGUN_SECRET` | only when switching mail on |
+   | `RESEND_API_KEY` | from Resend (resend.com) when switching mail on |
    | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | only for Google sign-in |
    | `APP_URL` | **optional** — blank auto-detects `RENDER_EXTERNAL_URL`; set only for a custom domain |
    | `GOOGLE_REDIRECT_URI` | **optional** — blank derives `<APP_URL>/api/auth/google/callback` |
@@ -82,7 +82,7 @@ Free tier: sleeps after ~15 min idle (first request ~30–60 s); no shell — us
 | --- | --- |
 | Render → `FRONTEND_URL` | set to the Vercel URL → Manual Deploy (drives email links, CORS and the Google callback) |
 | Google Cloud Console | add `https://<service>.onrender.com/api/auth/google/callback` to the OAuth client's **Authorized redirect URIs**. The API derives the identical value from `RENDER_EXTERNAL_URL`, so no `GOOGLE_REDIRECT_URI` is required — but if you do set it, it must match exactly |
-| Mailgun | set `MAIL_MAILER=mailgun` + `MAILGUN_DOMAIN` / `MAILGUN_SECRET` / `MAILGUN_ENDPOINT` on Render when ready for real email |
+| Resend | set `MAIL_MAILER=resend` + `RESEND_API_KEY` on Render when ready for real email |
 
 ---
 

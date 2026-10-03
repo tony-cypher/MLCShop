@@ -1,6 +1,6 @@
 """Transactional email.
 
-Uses Mailgun when ``MAIL_MAILER=mailgun`` and credentials are present, and
+Uses Resend when ``MAIL_MAILER=resend`` and credentials are present, and
 otherwise writes each message to the application log (the Laravel ``log``
 driver equivalent) so sign-up and checkout work end-to-end without keys.
 """
@@ -12,8 +12,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-import httpx
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+import resend
 
 from .config import settings
 from .models import Order, User
@@ -41,7 +41,7 @@ def send(to: str, subject: str, html: str, text: str | None = None) -> bool:
     """Deliver a message. Never raises — mail failure must not break requests."""
     sender = f"{settings.mail_from_name} <{settings.mail_from_address}>"
 
-    if not settings.mailgun_enabled:
+    if not settings.resend_enabled:
         logger.info(
             "[mail:log] to=%s subject=%r (MAIL_MAILER=%s — message not sent)\n%s",
             to,
@@ -52,22 +52,21 @@ def send(to: str, subject: str, html: str, text: str | None = None) -> bool:
         return False
 
     try:
-        response = httpx.post(
-            f"{settings.mailgun_base_url}/v3/{settings.mailgun_domain}/messages",
-            auth=("api", settings.mailgun_secret),
-            data={
-                "from": sender,
-                "to": to,
-                "subject": subject,
-                "html": html,
-                "text": text or "",
-            },
-            timeout=15.0,
-        )
-        response.raise_for_status()
+        resend.api_key = settings.resend_api_key
+        params: resend.Emails.SendParams = {
+            "from": sender,
+            "to": [to],
+            "subject": subject,
+            "html": html,
+        }
+        if text:
+            params["text"] = text
+
+        response = resend.Emails.send(params)
+        logger.info("Resend email delivered to %s, id=%s", to, response.get("id"))
         return True
     except Exception:  # pragma: no cover - network failure path
-        logger.exception("Mailgun delivery to %s failed", to)
+        logger.exception("Resend delivery to %s failed", to)
         return False
 
 

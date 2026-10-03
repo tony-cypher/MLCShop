@@ -2,7 +2,7 @@
 
 Mirrors the environment surface of the original Laravel backend so the same
 Render/Vercel deployment variables keep working: ``DB_*`` for Supabase
-Postgres, ``MAILGUN_*`` for email, ``GOOGLE_*`` for OAuth, ``FRONTEND_URL``
+Postgres, ``RESEND_*`` for email, ``GOOGLE_*`` for OAuth, ``FRONTEND_URL``
 for CORS + email links.
 """
 
@@ -66,12 +66,10 @@ class Settings(BaseSettings):
     sqlite_path: str = "shop.db"
 
     # ---------------------------------------------------------------- mail
-    mail_mailer: str = "log"  # "log" | "mailgun"
-    mail_from_address: str = "no-reply@mg.yourdomain.com"
+    mail_mailer: str = "resend"  # "resend" | "log"
+    mail_from_address: str = "onboarding@resend.dev"
     mail_from_name: str = "MLC"
-    mailgun_domain: str = ""
-    mailgun_secret: str = ""
-    mailgun_endpoint: str = "default"  # "default" | "api.eu.mailgun.net" | full URL
+    resend_api_key: str = ""
 
     # --------------------------------------------------------------- google
     google_client_id: str = ""
@@ -148,21 +146,11 @@ class Settings(BaseSettings):
         return bool(self.google_client_id and self.google_client_secret)
 
     @property
-    def mailgun_enabled(self) -> bool:
+    def resend_enabled(self) -> bool:
         return (
-            self.mail_mailer.lower() == "mailgun"
-            and bool(self.mailgun_domain)
-            and bool(self.mailgun_secret)
+            self.mail_mailer.lower() == "resend"
+            and bool(self.resend_api_key)
         )
-
-    @property
-    def mailgun_base_url(self) -> str:
-        endpoint = (self.mailgun_endpoint or "default").strip()
-        if endpoint.startswith("http"):
-            return endpoint.rstrip("/")
-        if endpoint in {"default", ""}:
-            return "https://api.mailgun.net"
-        return f"https://{endpoint.strip('/')}"
 
 
 def _normalise_url(url: str) -> str:

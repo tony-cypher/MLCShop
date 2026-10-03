@@ -56,17 +56,13 @@ services:
       - key: RUN_SEED
         value: "false" # set true once for the first deploy, then back to false
       - key: MAIL_MAILER
-        value: log # switch to mailgun in production
+        value: log # switch to resend in production
       - key: MAIL_FROM_ADDRESS
-        value: no-reply@mg.yourdomain.com
+        value: onboarding@resend.dev
       - key: MAIL_FROM_NAME
         value: MLC
-      - key: MAILGUN_DOMAIN
+      - key: RESEND_API_KEY
         sync: false
-      - key: MAILGUN_SECRET
-        sync: false
-      - key: MAILGUN_ENDPOINT
-        value: default # use api.eu.mailgun.net for EU accounts
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

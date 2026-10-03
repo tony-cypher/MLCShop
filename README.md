@@ -1,7 +1,7 @@
 # MLC — Shop
 
 A full-stack ecommerce demo: **React (Vite + TypeScript)** storefront with a **FastAPI (Python)**
-API, **Supabase Postgres** for storage and **Mailgun** for transactional email.
+API, **Supabase Postgres** for storage and **Resend** for transactional email.
 
 This is a backend rebuild of the original Laravel version: the React app, its structure, markup and
 UI are unchanged — only the API was reimplemented in FastAPI. The API keeps the exact same routes,
@@ -21,7 +21,7 @@ featured product card — plus a **test-only checkout**, order history, email co
 | Storefront | React 19, Vite, TypeScript, React Router |
 | API | FastAPI, SQLAlchemy 2.0, Pydantic v2, opaque bearer tokens |
 | Database | Supabase Postgres (falls back to SQLite locally) |
-| Email | Mailgun (falls back to the log driver in dev) |
+| Email | Resend (falls back to the log driver in dev) |
 | Checkout | Test only — Luhn-checked card, no processor, no charge |
 | Auth | Register / login / email confirmation / Google OAuth / favourites / orders |
 
@@ -137,36 +137,30 @@ python -c "from app.database import SessionLocal; from app.models import Product
 
 ---
 
-## 6. Connecting Mailgun
-
+## 6. Connecting Resend
+ 
 Two emails are sent by the app:
-
+ 
 | Mail | Trigger |
 | --- | --- |
 | Email confirmation | Registration (and "Resend email" in the header banner) |
 | Order confirmation | Successful test checkout |
-
-1. In [Mailgun](https://app.mailgun.com) go to **Sending → Domain names** and add your domain
-   (or use the free sandbox domain `sandboxXXXX.mailgun.org`).
-2. Add the DNS records Mailgun shows, then wait for **Verified**.
-3. Copy the **API key** from **Settings → API security** (starts with `key-`).
-4. Fill in `backend/.env`:
-
+ 
+1. In [Resend](https://resend.com) go to **API Keys** and generate an API key.
+2. If using your own domain, add and verify it under **Domains**. Otherwise, you can test with `onboarding@resend.dev` (delivered to your account email).
+3. Fill in `backend/.env`:
+ 
 ```env
-MAIL_MAILER=mailgun
-MAILGUN_DOMAIN=mg.yourdomain.com
-MAILGUN_SECRET=key-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-MAILGUN_ENDPOINT=default          # use api.eu.mailgun.net for EU accounts
-
-MAIL_FROM_ADDRESS=no-reply@mg.yourdomain.com   # must be on the verified domain
+MAIL_MAILER=resend
+RESEND_API_KEY=re_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+MAIL_FROM_ADDRESS=onboarding@resend.dev   # or your verified domain e.g. no-reply@yourdomain.com
 MAIL_FROM_NAME=MLC
-FRONTEND_URL=http://localhost:5173             # used in the confirmation link
+FRONTEND_URL=http://localhost:5173        # used in the confirmation link
 ```
-
-5. Confirm the wiring by registering an account and checking the log/your inbox.
-
-> **Sandbox domains** only deliver to addresses you add under *Authorized recipients*.
-> Until Mailgun is configured, leave `MAIL_MAILER=log` — every email (with the full confirmation
+ 
+4. Confirm the wiring by registering an account and checking the log/your inbox.
+ 
+> Without `RESEND_API_KEY` (or with `MAIL_MAILER=log`), every email (with the full confirmation
 > link) is written to the application log instead, so registration and checkout still work end to end.
 
 ---
@@ -314,7 +308,7 @@ the catalogue stays fast with no external CDN calls at runtime.
 | `frontend/` — React storefront | **Vercel** | static build (`npm run build` → `dist`) |
 | `backend/` — FastAPI service | **Render** | native Python runtime, talks to Supabase Postgres |
 | Database | **Supabase** | already live — no new DB needed |
-| Email | **Mailgun** | or `MAIL_MAILER=log` to test in Render logs |
+| Email | **Resend** | or `MAIL_MAILER=log` to test in Render logs |
 
 All deployment files are already in the repo: `render.yaml` (blueprint), `frontend/vercel.json`,
 `backend/.env.production.example`, `frontend/.env.example`. See **`DEPLOY.md`** for the
@@ -374,20 +368,20 @@ CLI alternative: `cd frontend && npm i -g vercel && vercel --prod`.
 | Render → `FRONTEND_URL` | set to the Vercel URL → **Manual Deploy** (drives email links + CORS + Google callback) |
 | Vercel → `VITE_API_URL` | already set in step 2 → every change here needs a **redeploy** (Vite bakes it at build time) |
 | Google Cloud Console | add `https://<service>.onrender.com/api/auth/google/callback` to the OAuth client's **Authorized redirect URIs** — the API derives the same value automatically, so `GOOGLE_REDIRECT_URI` is optional |
-| Mailgun | set `MAIL_MAILER=mailgun` + the three `MAILGUN_*` values on Render when ready to send real email |
-
-Order of operations for a clean first rollout: **push → Render deploy → get API URL → Vercel
-deploy with `VITE_API_URL` → get Vercel URL → back to Render, set `FRONTEND_URL` (and, if using
-Google sign-in, register the callback in the Cloud Console) → redeploy Render.**
-
-### Production checklist
-
-- [ ] `/up` returns “OK” and `/api/products` returns JSON from the Render URL
-- [ ] Storefront loads and the catalogue shows products (VITE_API_URL correct)
-- [ ] Register/login works (check Render Logs if requests fail — usually CORS = wrong `FRONTEND_URL`)
-- [ ] `APP_ENV=production`, `APP_DEBUG=false`, `RUN_SEED=false`
-- [ ] Test checkout places an order and (with Mailgun) the confirmation email arrives
-- [ ] Google sign-in works in production
+| Resend | set `MAIL_MAILER=resend` + `RESEND_API_KEY` on Render when ready to send real email |
+ 
+ Order of operations for a clean first rollout: **push → Render deploy → get API URL → Vercel
+ deploy with `VITE_API_URL` → get Vercel URL → back to Render, set `FRONTEND_URL` (and, if using
+ Google sign-in, register the callback in the Cloud Console) → redeploy Render.**
+ 
+ ### Production checklist
+ 
+ - [ ] `/up` returns “OK” and `/api/products` returns JSON from the Render URL
+ - [ ] Storefront loads and the catalogue shows products (VITE_API_URL correct)
+ - [ ] Register/login works (check Render Logs if requests fail — usually CORS = wrong `FRONTEND_URL`)
+ - [ ] `APP_ENV=production`, `APP_DEBUG=false`, `RUN_SEED=false`
+ - [ ] Test checkout places an order and (with Resend) the confirmation email arrives
+ - [ ] Google sign-in works in production
 
 ---
 
