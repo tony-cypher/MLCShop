@@ -126,6 +126,13 @@ app.include_router(checkout.router, prefix="/api", tags=["checkout"])
 app.include_router(favorites.router, prefix="/api", tags=["favorites"])
 app.include_router(orders.router, prefix="/api", tags=["orders"])
 
+from pathlib import Path
+from starlette.staticfiles import StaticFiles
+
+_static_img_dir = Path(__file__).resolve().parent / "static" / "img"
+if _static_img_dir.exists():
+    app.mount("/img", StaticFiles(directory=str(_static_img_dir)), name="img")
+
 
 @app.get("/up", response_class=PlainTextResponse, include_in_schema=False)
 def health() -> str:
