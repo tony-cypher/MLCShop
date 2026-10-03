@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from .. import urls
@@ -20,7 +20,7 @@ from ..database import get_db
 from ..deps import get_optional_user
 from ..errors import ApiValidationError
 from ..mailer import send_order_confirmed_email
-from ..models import Order, OrderItem, Product, User, utcnow
+from ..models import CartItem, Order, OrderItem, Product, User, utcnow
 from ..ratelimit import checkout_throttle
 from ..schemas import CheckoutRequest
 from ..security import random_suffix
@@ -56,6 +56,9 @@ def store(
     except Exception:
         db.rollback()
         raise
+
+    if user:
+        db.execute(delete(CartItem).where(CartItem.user_id == user.id))
 
     db.commit()
     db.refresh(order)

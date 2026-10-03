@@ -168,3 +168,4 @@ node_modules
 shop.db
 test_shop.db
 smoke.db
+*.db

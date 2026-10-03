@@ -57,6 +57,9 @@ class User(TimestampMixin, Base):
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500))
 
     favorites: Mapped[list["Favorite"]] = relationship(back_populates="user")
+    cart_items: Mapped[list["CartItem"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
     orders: Mapped[list["Order"]] = relationship(back_populates="user")
     tokens: Mapped[list["AuthToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -180,6 +183,24 @@ class Favorite(TimestampMixin, Base):
     product: Mapped[Product] = relationship()
 
     __table_args__ = (UniqueConstraint("user_id", "product_id", name="favorites_user_id_product_id_unique"),)
+
+
+class CartItem(TimestampMixin, Base):
+    __tablename__ = "cart_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+    size: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    color: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    user: Mapped[User] = relationship(back_populates="cart_items")
+    product: Mapped[Product] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "product_id", "size", "color", name="cart_items_user_prod_variant_unique"),
+    )
 
 
 class Order(TimestampMixin, Base):

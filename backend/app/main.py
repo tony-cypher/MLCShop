@@ -15,7 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .config import settings
 from .database import create_all
 from .errors import ApiError, ApiValidationError
-from .routers import auth, catalog, checkout, favorites, orders
+from .routers import auth, cart, catalog, checkout, favorites, orders
 from .validation import errors_from_pydantic
 
 logging.basicConfig(
@@ -121,6 +121,7 @@ async def handle_unexpected(_request: Request, exc: Exception) -> JSONResponse:
 
 app.include_router(catalog.router, prefix="/api", tags=["catalog"])
 app.include_router(auth.router, prefix="/api", tags=["auth"])
+app.include_router(cart.router, prefix="/api", tags=["cart"])
 app.include_router(checkout.router, prefix="/api", tags=["checkout"])
 app.include_router(favorites.router, prefix="/api", tags=["favorites"])
 app.include_router(orders.router, prefix="/api", tags=["orders"])

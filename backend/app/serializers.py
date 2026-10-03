@@ -185,3 +185,26 @@ def user_payload(user: User) -> dict:
         "avatar_emoji": "🧑‍🚀",
         "avatar_url": user.avatar_url,
     }
+
+
+def cart_item_payload(cart_item: Any) -> dict:
+    product = cart_item.product
+    price_val = float(product.price) if product else 0.0
+    compare_val = float(product.compare_at_price) if product and product.compare_at_price else None
+    return {
+        "id": product.id if product else cart_item.product_id,
+        "cart_item_id": cart_item.id,
+        "slug": product.slug if product else "",
+        "name": product.name if product else "",
+        "price": price_val,
+        "compare_at_price": compare_val,
+        "emoji": product.emoji if product else "🛍️",
+        "image_url": product.image_url if product else None,
+        "quantity": cart_item.quantity,
+        "size": cart_item.size,
+        "color": cart_item.color,
+        "stock": product.stock if product else 100,
+        "delivery_standard": product.delivery_standard if product else True,
+        "delivery_pickup": product.delivery_pickup if product else False,
+    }
+

@@ -39,6 +39,31 @@ class VerifyEmailRequest(BaseModel):
 # --------------------------------------------------------------------------- #
 
 
+class CartItemSync(BaseModel):
+    id: int
+    quantity: int = Field(ge=1, le=100)
+    size: Optional[str] = None
+    color: Optional[str] = None
+
+
+class CartSyncRequest(BaseModel):
+    items: list[CartItemSync] = Field(default_factory=list)
+
+
+class CartItemAdd(BaseModel):
+    product_id: int
+    quantity: int = Field(default=1, ge=1, le=100)
+    size: Optional[str] = None
+    color: Optional[str] = None
+
+
+class CartItemUpdate(BaseModel):
+    product_id: int
+    quantity: int = Field(ge=0, le=100)
+    size: Optional[str] = None
+    color: Optional[str] = None
+
+
 class CheckoutItem(BaseModel):
     product_id: int
     quantity: int = Field(ge=1, le=10)
