@@ -66,9 +66,18 @@ class Settings(BaseSettings):
     sqlite_path: str = "shop.db"
 
     # ---------------------------------------------------------------- mail
-    mail_mailer: str = "resend"  # "resend" | "log"
-    mail_from_address: str = "onboarding@resend.dev"
+    mail_mailer: str = "smtp"  # "smtp" | "resend" | "log"
+    mail_from_address: str = "your-email@gmail.com"
     mail_from_name: str = "MLC"
+    
+    # SMTP (e.g. Gmail: smtp.gmail.com:587)
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_tls: bool = True
+    
+    # Resend
     resend_api_key: str = ""
 
     # --------------------------------------------------------------- google
@@ -151,6 +160,19 @@ class Settings(BaseSettings):
             self.mail_mailer.lower() == "resend"
             and bool(self.resend_api_key)
         )
+
+    @property
+    def smtp_enabled(self) -> bool:
+        return (
+            self.mail_mailer.lower() == "smtp"
+            and bool(self.smtp_host)
+            and bool(self.smtp_username)
+            and bool(self.smtp_password)
+        )
+
+    @property
+    def mail_enabled(self) -> bool:
+        return self.smtp_enabled or self.resend_enabled
 
 
 def _normalise_url(url: str) -> str:

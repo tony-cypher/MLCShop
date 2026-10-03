@@ -56,13 +56,23 @@ services:
       - key: RUN_SEED
         value: "false" # set true once for the first deploy, then back to false
       - key: MAIL_MAILER
-        value: log # switch to resend in production
+        value: log # switch to smtp (or resend) in production
       - key: MAIL_FROM_ADDRESS
-        value: onboarding@resend.dev
+        sync: false # your email, e.g. your-name@gmail.com
       - key: MAIL_FROM_NAME
         value: MLC
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false # your gmail address
+      - key: SMTP_PASSWORD
+        sync: false # your 16-char Google App Password
+      - key: SMTP_TLS
+        value: "true"
       - key: RESEND_API_KEY
-        sync: false
+        sync: false # optional if using resend instead
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

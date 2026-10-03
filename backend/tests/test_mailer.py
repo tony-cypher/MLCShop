@@ -76,3 +76,31 @@ def test_send_verification_email_renders_and_sends(monkeypatch):
     assert call_args["to"] == ["ada@example.com"]
     assert "Confirm your email" in call_args["subject"]
     assert "http://localhost:5173/verify?token=tok_123" in call_args["html"]
+
+
+def test_send_invokes_smtp_when_enabled(monkeypatch):
+    test_settings = Settings(
+        mail_mailer="smtp",
+        mail_from_address="sender@gmail.com",
+        mail_from_name="MLC",
+        smtp_host="smtp.gmail.com",
+        smtp_port=587,
+        smtp_username="sender@gmail.com",
+        smtp_password="app_password_123",
+        smtp_tls=True,
+    )
+    monkeypatch.setattr("app.mailer.settings", test_settings)
+
+    mock_server = MagicMock()
+    with patch("smtplib.SMTP", return_value=mock_server):
+        mock_server.__enter__.return_value = mock_server
+        result = send("receiver@example.com", "Test Subject", "<p>Body</p>")
+
+    assert result is True
+    mock_server.starttls.assert_called_once()
+    mock_server.login.assert_called_once_with("sender@gmail.com", "app_password_123")
+    mock_server.sendmail.assert_called_once()
+    args = mock_server.sendmail.call_args[0]
+    assert args[0] == "sender@gmail.com"
+    assert args[1] == ["receiver@example.com"]
+

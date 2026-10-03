@@ -1,14 +1,19 @@
 """Transactional email.
 
-Uses Resend when ``MAIL_MAILER=resend`` and credentials are present, and
-otherwise writes each message to the application log (the Laravel ``log``
-driver equivalent) so sign-up and checkout work end-to-end without keys.
+Uses SMTP (e.g. Gmail) when ``MAIL_MAILER=smtp``, Resend when
+``MAIL_MAILER=resend``, and otherwise writes each message to the application
+log (the Laravel ``log`` driver equivalent) so sign-up and checkout work
+end-to-end without keys.
 """
 
 from __future__ import annotations
 
 import logging
+import smtplib
 from decimal import Decimal
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formataddr
 from pathlib import Path
 from typing import Any
 
@@ -37,20 +42,35 @@ def render(template: str, **context: Any) -> str:
     return _env.get_template(template).render(**context)
 
 
-def send(to: str, subject: str, html: str, text: str | None = None) -> bool:
-    """Deliver a message. Never raises — mail failure must not break requests."""
-    sender = f"{settings.mail_from_name} <{settings.mail_from_address}>"
+def _send_smtp(to: str, subject: str, html: str, text: str | None = None) -> bool:
+    """Send via SMTP (e.g. Gmail with TLS)."""
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = formataddr((settings.mail_from_name, settings.mail_from_address))
+        msg["To"] = to
 
-    if not settings.resend_enabled:
-        logger.info(
-            "[mail:log] to=%s subject=%r (MAIL_MAILER=%s — message not sent)\n%s",
-            to,
-            subject,
-            settings.mail_mailer,
-            html,
-        )
+        if text:
+            msg.attach(MIMEText(text, "plain", "utf-8"))
+        msg.attach(MIMEText(html, "html", "utf-8"))
+
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15.0) as server:
+            if settings.smtp_tls:
+                server.starttls()
+            if settings.smtp_username and settings.smtp_password:
+                server.login(settings.smtp_username, settings.smtp_password)
+            server.sendmail(settings.mail_from_address, [to], msg.as_string())
+
+        logger.info("SMTP email delivered to %s via %s", to, settings.smtp_host)
+        return True
+    except Exception:
+        logger.exception("SMTP delivery to %s failed", to)
         return False
 
+
+def _send_resend(to: str, subject: str, html: str, text: str | None = None) -> bool:
+    """Send via Resend API."""
+    sender = f"{settings.mail_from_name} <{settings.mail_from_address}>"
     try:
         resend.api_key = settings.resend_api_key
         params: resend.Emails.SendParams = {
@@ -65,9 +85,43 @@ def send(to: str, subject: str, html: str, text: str | None = None) -> bool:
         response = resend.Emails.send(params)
         logger.info("Resend email delivered to %s, id=%s", to, response.get("id"))
         return True
-    except Exception:  # pragma: no cover - network failure path
+    except Exception:
         logger.exception("Resend delivery to %s failed", to)
         return False
+
+
+def send(to: str, subject: str, html: str, text: str | None = None) -> bool:
+    """Deliver a message. Never raises — mail failure must not break requests."""
+    if settings.mail_mailer.lower() == "smtp":
+        if not settings.smtp_enabled:
+            logger.info(
+                "[mail:log] to=%s subject=%r (MAIL_MAILER=smtp but credentials missing — message not sent)\n%s",
+                to,
+                subject,
+                html,
+            )
+            return False
+        return _send_smtp(to, subject, html, text)
+
+    if settings.mail_mailer.lower() == "resend":
+        if not settings.resend_enabled:
+            logger.info(
+                "[mail:log] to=%s subject=%r (MAIL_MAILER=resend but RESEND_API_KEY missing — message not sent)\n%s",
+                to,
+                subject,
+                html,
+            )
+            return False
+        return _send_resend(to, subject, html, text)
+
+    logger.info(
+        "[mail:log] to=%s subject=%r (MAIL_MAILER=%s — message not sent)\n%s",
+        to,
+        subject,
+        settings.mail_mailer,
+        html,
+    )
+    return False
 
 
 # --------------------------------------------------------------------------- #
